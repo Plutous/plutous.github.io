@@ -922,8 +922,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // 處理 hexo-blog-encrypt 事件
   window.addEventListener('hexo-blog-decrypt', e => {
     forPostFn()
-    window.translateFn.translateInitialization()
-    Object.values(window.globalFn.encrypt).forEach(fn => {
+    window.translateFn && window.translateFn.translateInitialization()
+    Object.values((window.globalFn && window.globalFn.encrypt) || {}).forEach(fn => {
       fn()
     })
   })
