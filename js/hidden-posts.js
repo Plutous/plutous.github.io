@@ -114,7 +114,7 @@
       <div class="hidden-posts-dialog" role="dialog" aria-modal="true" aria-labelledby="hidden-posts-dialog-title">
         <button class="hidden-posts-dialog-close" type="button" aria-label="关闭"><i class="fas fa-times" aria-hidden="true"></i></button>
         <div class="hidden-posts-dialog-icon"><i class="fas fa-key" aria-hidden="true"></i></div>
-        <h2 id="hidden-posts-dialog-title">打开隐藏文章</h2>
+        <h2 id="hidden-posts-dialog-title"></h2>
         <p>输入访问密码后，本次浏览会话内保持解锁。</p>
         <form>
           <label for="hidden-posts-password">访问密码</label>
@@ -299,6 +299,147 @@
     tocContent.style.display = 'block'
   }
 
+  const createElement = (tagName, className, textContent) => {
+    const element = document.createElement(tagName)
+    if (className) element.className = className
+    if (textContent !== undefined) element.textContent = textContent
+    return element
+  }
+
+  const appendIcon = (parent, className) => {
+    parent.appendChild(createElement('i', `${className} fa-fw post-meta-icon`))
+  }
+
+  const appendSeparator = parent => {
+    parent.appendChild(createElement('span', 'post-meta-separator', '|'))
+  }
+
+  const appendDate = (parent, label, value, iso, iconClass) => {
+    appendIcon(parent, iconClass)
+    parent.appendChild(createElement('span', 'post-meta-label', label))
+    const time = createElement('time', '', value)
+    time.dateTime = iso
+    time.title = `${label} ${value}`
+    parent.appendChild(time)
+  }
+
+  const renderPostMeta = post => {
+    const container = document.getElementById('post-meta')
+    if (!container) return
+
+    const firstLine = createElement('div', 'meta-firstline')
+    const meta = post.meta || {}
+    if (meta.dateType) {
+      const date = createElement('span', 'post-meta-date')
+      if (meta.dateType === 'both') {
+        appendDate(date, '发表于', post.date, post.dateIso, 'far fa-calendar-alt')
+        appendSeparator(date)
+        appendDate(date, '更新于', post.updated, post.updatedIso, 'fas fa-history')
+      } else if (meta.dateType === 'updated') {
+        appendDate(date, '更新于', post.updated, post.updatedIso, 'fas fa-history')
+      } else {
+        appendDate(date, '发表于', post.date, post.dateIso, 'far fa-calendar-alt')
+      }
+      firstLine.appendChild(date)
+    }
+
+    if (meta.showCategories && post.categories.length) {
+      const categories = createElement('span', 'post-meta-categories')
+      if (firstLine.childElementCount) appendSeparator(categories)
+      post.categories.forEach((category, index) => {
+        appendIcon(categories, 'fas fa-inbox')
+        const link = createElement('a', 'post-meta-categories', category.name)
+        link.href = category.url
+        categories.appendChild(link)
+        if (index < post.categories.length - 1) {
+          categories.appendChild(createElement('i', 'fas fa-angle-right post-meta-separator'))
+        }
+      })
+      firstLine.appendChild(categories)
+    }
+
+    const secondLine = createElement('div', 'meta-secondline')
+    if (meta.showWordCount || meta.showReadingTime) {
+      const counts = createElement('span', 'post-meta-wordcount')
+      if (meta.showWordCount) {
+        appendIcon(counts, 'far fa-file-word')
+        counts.appendChild(createElement('span', 'post-meta-label', '总字数:'))
+        counts.appendChild(createElement('span', 'word-count', post.wordCount))
+      }
+      if (meta.showWordCount && meta.showReadingTime) appendSeparator(counts)
+      if (meta.showReadingTime) {
+        appendIcon(counts, 'far fa-clock')
+        counts.appendChild(createElement('span', 'post-meta-label', '阅读时长:'))
+        counts.appendChild(createElement('span', 'read-time', `${post.readingTime}分钟`))
+      }
+      secondLine.appendChild(counts)
+    }
+
+    container.replaceChildren()
+    if (firstLine.childElementCount) container.appendChild(firstLine)
+    if (secondLine.childElementCount) container.appendChild(secondLine)
+  }
+
+  const renderPostTags = post => {
+    const list = document.querySelector('#post > .tag_share .post-meta__tag-list')
+    if (!list) return
+    list.replaceChildren()
+    if (!post.meta || !post.meta.showTags) return
+
+    post.tags.forEach(tag => {
+      const link = createElement('a', 'post-meta__tags', tag.name)
+      link.href = tag.url
+      list.appendChild(link)
+    })
+  }
+
+  const renderPostCopyright = post => {
+    const container = document.querySelector('#post > .post-copyright')
+    const copyright = post.copyright || {}
+    if (!container) return
+    if (!copyright.enabled) {
+      container.remove()
+      return
+    }
+
+    const createRow = (className, iconClass, label) => {
+      const row = createElement('div', className)
+      const labelElement = createElement('span', 'post-copyright-meta')
+      labelElement.appendChild(createElement('i', `${iconClass} fa-fw`))
+      labelElement.appendChild(document.createTextNode(`${label}: `))
+      const info = createElement('span', 'post-copyright-info')
+      row.append(labelElement, info)
+      return { row, info }
+    }
+
+    const author = createRow('post-copyright__author', 'fas fa-circle-user', '文章作者')
+    const authorLink = createElement('a', '', copyright.author)
+    authorLink.href = copyright.authorHref
+    author.info.appendChild(authorLink)
+
+    const type = createRow('post-copyright__type', 'fas fa-square-arrow-up-right', '文章链接')
+    const urlLink = createElement('a', '', copyright.url)
+    urlLink.href = copyright.url
+    type.info.appendChild(urlLink)
+
+    const notice = createRow('post-copyright__notice', 'fas fa-circle-exclamation', '版权声明')
+    if (copyright.customInfo) {
+      notice.info.innerHTML = copyright.customInfo
+    } else {
+      notice.info.appendChild(document.createTextNode('本博客所有文章除特别声明外，均采用 '))
+      const license = createElement('a', '', copyright.license)
+      license.href = copyright.licenseUrl
+      license.target = '_blank'
+      notice.info.append(license, document.createTextNode(' 许可协议。转载请注明来源 '))
+      const site = createElement('a', '', post.siteTitle)
+      site.href = copyright.siteUrl
+      site.target = '_blank'
+      notice.info.append(site, document.createTextNode('！'))
+    }
+
+    container.replaceChildren(author.row, type.row, notice.row)
+  }
+
   const renderPost = async key => {
     const view = document.getElementById('hidden-post-view')
     const payloadElement = document.getElementById('hidden-post-payload')
@@ -311,19 +452,21 @@
     navigation.className = 'hidden-post-back'
     navigation.href = post.vaultUrl
     navigation.innerHTML = '<i class="fas fa-arrow-left" aria-hidden="true"></i> 返回隐藏文章'
-    const date = document.createElement('time')
-    date.className = 'hidden-post-date'
-    date.textContent = post.date
     const content = document.createElement('article')
     content.className = 'hidden-post-content'
     content.innerHTML = post.content
-    view.append(navigation, date, content)
+    view.append(navigation, content)
 
     document.querySelectorAll('.page-title, .post-title, #site-title').forEach(element => {
       element.textContent = post.title
     })
+    renderPostMeta(post)
+    renderPostTags(post)
+    renderPostCopyright(post)
     document.title = post.siteTitle ? `${post.title} | ${post.siteTitle}` : post.title
     renderPostToc(content, post.tocNumber)
+    const pageRoot = document.getElementById('body-wrap')
+    if (pageRoot) pageRoot.classList.add('is-unlocked')
     window.dispatchEvent(new CustomEvent('hexo-blog-decrypt'))
   }
 
