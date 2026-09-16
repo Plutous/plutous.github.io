@@ -2,6 +2,11 @@
   overflow: hidden;
 }
 
+#body-wrap.type-hidden-post:not(.is-unlocked) #post-meta,
+#body-wrap.type-hidden-post:not(.is-unlocked) #post > :not(#post-info):not(#article-container) {
+  display: none !important;
+}
+
 .hidden-posts-modal {
   position: fixed;
   inset: 0;
